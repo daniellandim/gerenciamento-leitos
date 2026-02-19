@@ -1,59 +1,235 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🏥 Hospital Bed Management API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API RESTful para gerenciamento de leitos hospitalares, desenvolvida com **PHP 8.4 + Laravel 12 + PostgreSQL**, containerizada com **Docker**.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📋 Funcionalidades
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Funcionalidade | Método | Endpoint |
+|---|---|---|
+| Listar leitos com status | `GET` | `/api/beds` |
+| Status de um leito | `GET` | `/api/beds/{id}/status` |
+| Internar paciente | `POST` | `/api/beds/{id}/admit` |
+| Desocupar leito | `POST` | `/api/beds/{id}/discharge` |
+| Transferir paciente | `POST` | `/api/beds/{id}/transfer` |
+| Buscar leito por CPF | `GET` | `/api/patients/search?cpf={cpf}` |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 🚀 Como executar
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Pré-requisitos
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- [Docker](https://www.docker.com/) instalado
+- [Docker Compose](https://docs.docker.com/compose/) instalado
 
-## Laravel Sponsors
+### Passo a passo
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+**1. Clone o repositório**
+```bash
+git clone <url-do-repositorio>
+cd hospital-beds
+```
 
-### Premium Partners
+**2. Configure as variáveis de ambiente**
+```bash
+cp .env.example .env
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+**3. Suba os containers**
+```bash
+docker compose up -d --build
+```
 
-## Contributing
+**4. Aguarde o banco de dados inicializar e rode as migrations**
+```bash
+docker compose exec app php artisan migrate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**5. (Opcional) Popule o banco com dados de exemplo**
+```bash
+docker compose exec app php artisan db:seed
+```
 
-## Code of Conduct
+A API estará disponível em: **http://localhost:8080/api**
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🧪 Rodando os testes
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+docker compose exec app php artisan test
+```
 
-## License
+Para ver detalhes de cada teste:
+```bash
+docker compose exec app php artisan test --verbose
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 📡 Exemplos de uso
+
+### Listar todos os leitos
+```bash
+curl http://localhost:8080/api/beds
+```
+
+**Resposta:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "identifier": "UTI-01",
+      "description": "UTI Adulto",
+      "status": "occupied",
+      "patient": {
+        "id": 1,
+        "name": "João da Silva",
+        "cpf": "12345678901",
+        "admitted_at": "2024-01-15T10:30:00.000000Z"
+      }
+    },
+    {
+      "id": 2,
+      "identifier": "UTI-02",
+      "description": "UTI Adulto",
+      "status": "available",
+      "patient": null
+    }
+  ]
+}
+```
+
+---
+
+### Status de um leito
+```bash
+curl http://localhost:8080/api/beds/1/status
+```
+
+---
+
+### Internar um paciente
+```bash
+curl -X POST http://localhost:8080/api/beds/1/admit \
+  -H "Content-Type: application/json" \
+  -d '{"cpf": "12345678901", "name": "João da Silva"}'
+```
+
+> ℹ️ Se o paciente não existir no banco, ele será criado automaticamente com o CPF e nome informados.
+
+**Resposta (201):**
+```json
+{
+  "message": "Paciente internado com sucesso.",
+  "data": {
+    "id": 1,
+    "bed": { "id": 1, "identifier": "UTI-01" },
+    "patient": { "id": 1, "name": "João da Silva", "cpf": "12345678901" },
+    "admitted_at": "2024-01-15T10:30:00.000000Z",
+    "discharged_at": null
+  }
+}
+```
+
+---
+
+### Desocupar um leito
+```bash
+curl -X POST http://localhost:8080/api/beds/1/discharge
+```
+
+---
+
+### Transferir paciente para outro leito
+```bash
+curl -X POST http://localhost:8080/api/beds/1/transfer \
+  -H "Content-Type: application/json" \
+  -d '{"target_bed_id": 3}'
+```
+
+---
+
+### Buscar leito por CPF do paciente
+```bash
+curl http://localhost:8080/api/patients/search?cpf=12345678901
+```
+
+**Resposta:**
+```json
+{
+  "data": {
+    "patient": { "id": 1, "name": "João da Silva", "cpf": "12345678901" },
+    "bed": { "id": 1, "identifier": "UTI-01", "description": "UTI Adulto" },
+    "admitted_at": "2024-01-15T10:30:00.000000Z"
+  }
+}
+```
+
+---
+
+## ⚠️ Regras de negócio
+
+- Um paciente **não pode estar em mais de um leito** ao mesmo tempo
+- Cada leito **suporta apenas um paciente** por vez
+- Tentativas de violar essas regras retornam **HTTP 409 Conflict** com mensagem descritiva
+- O histórico de todas as internações é preservado no banco (auditoria)
+
+---
+
+## 🗄️ Estrutura do banco de dados
+
+```
+beds
+├── id
+├── identifier  (único, ex: "UTI-01")
+├── description (opcional)
+└── timestamps
+
+patients
+├── id
+├── name
+├── cpf         (único, 11 dígitos)
+└── timestamps
+
+bed_occupancies
+├── id
+├── bed_id      (FK → beds)
+├── patient_id  (FK → patients)
+├── admitted_at
+├── discharged_at (NULL = internação ativa)
+└── timestamps
+```
+
+---
+
+## 🏗️ Arquitetura
+
+```
+app/
+├── Http/Controllers/
+│   ├── BedController.php      # Endpoints de leitos
+│   └── PatientController.php  # Busca por CPF
+├── Models/
+│   ├── Bed.php
+│   ├── Patient.php
+│   └── BedOccupancy.php
+└── Services/
+    └── BedService.php         # Regras de negócio isoladas
+```
+
+---
+
+## 🛑 Parando os containers
+
+```bash
+docker compose down
+```
+
+Para remover também os volumes (dados do banco):
+```bash
+docker compose down -v
+```
