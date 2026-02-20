@@ -89,13 +89,13 @@ class BedService
         $patient = Patient::where('cpf', $cpf)->first();
 
         if (!$patient) {
-            throw new \Exception('Paciente não encontrado.', Response::HTTP_NOT_FOUND);
+            throw new \DomainException('Paciente não encontrado.', Response::HTTP_NOT_FOUND);
         }
 
         $occupancy = $patient->currentOccupancy()->with(['bed', 'patient'])->first();
 
         if (!$occupancy) {
-            throw new \Exception('Paciente não está internado em nenhum leito.', Response::HTTP_NOT_FOUND);
+            throw new \DomainException('Paciente não está internado em nenhum leito.', Response::HTTP_NOT_FOUND);
         }
 
         return $occupancy;

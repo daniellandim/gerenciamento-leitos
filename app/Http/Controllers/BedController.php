@@ -10,6 +10,7 @@ use App\Models\Bed;
 use App\Models\Patient;
 use App\Services\BedService;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class BedController extends Controller
 {
@@ -25,12 +26,9 @@ class BedController extends Controller
         return BedResource::collection($beds);
     }
 
-    public function status(Bed $bed)
+    public function status(Bed $bed): BedResource
     {
-
         $bed->load('currentOccupancy.patient');
-
-
         return BedResource::make($bed);
     }
 
@@ -48,9 +46,12 @@ class BedController extends Controller
             return response()->json([
                 'message' => 'Paciente internado com sucesso.',
                 'data'    => OccupancyResource::make($occupancy),
-            ], 201);
+            ], Response::HTTP_CREATED);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 422);
+            return response()->json(
+                ['message' => $e->getMessage()],
+                $e->getCode() ?: Response::HTTP_UNPROCESSABLE_ENTITY
+            );
         }
     }
 
@@ -64,7 +65,10 @@ class BedController extends Controller
                 'data'    => OccupancyResource::make($occupancy),
             ]);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 422);
+            return response()->json(
+                ['message' => $e->getMessage()],
+                $e->getCode() ?: Response::HTTP_UNPROCESSABLE_ENTITY
+            );
         }
     }
 
@@ -82,7 +86,10 @@ class BedController extends Controller
                 'data'    => OccupancyResource::make($occupancy),
             ]);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 422);
+            return response()->json(
+                ['message' => $e->getMessage()],
+                $e->getCode() ?: Response::HTTP_UNPROCESSABLE_ENTITY
+            );
         }
     }
 

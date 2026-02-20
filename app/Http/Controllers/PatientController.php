@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\FindBedRequest;
 use App\Http\Resources\PatientBedResource;
 use App\Services\BedService;
+use Symfony\Component\HttpFoundation\Response;
 
 class PatientController extends Controller
 {
@@ -18,7 +19,10 @@ class PatientController extends Controller
             $occupancy = $this->bedService->findBedByCpf($request->cpf);
             return PatientBedResource::make($occupancy);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 422);
+            return response()->json(
+                ['message' => $e->getMessage()],
+                $e->getCode() ?: Response::HTTP_UNPROCESSABLE_ENTITY
+            );
         }
     }
 }
