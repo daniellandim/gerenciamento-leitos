@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\FindBedRequest;
 use App\Http\Resources\PatientBedResource;
-use App\services\BedService;
+use App\Services\BedService;
 
 class PatientController extends Controller
 {

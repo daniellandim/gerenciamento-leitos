@@ -8,7 +8,7 @@ use App\Http\Resources\BedResource;
 use App\Http\Resources\OccupancyResource;
 use App\Models\Bed;
 use App\Models\Patient;
-use App\services\BedService;
+use App\Services\BedService;
 use Illuminate\Http\JsonResponse;
 
 class BedController extends Controller

@@ -3,7 +3,7 @@
 use App\Models\Bed;
 use App\Models\BedOccupancy;
 use App\Models\Patient;
-use App\services\BedService;
+use App\Services\BedService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

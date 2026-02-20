@@ -1,6 +1,6 @@
 <?php
 
-namespace App\services;
+namespace App\Services;
 
 use App\Models\Bed;
 use App\Models\BedOccupancy;
@@ -60,17 +60,17 @@ class BedService
     {
         return DB::transaction(function () use ($sourceBed, $targetBed) {
             if ($sourceBed->id === $targetBed->id) {
-                throw new \Exception('O leito de origem e destino não podem ser o mesmo.', 422);
+                throw new \Exception('O leito de origem e destino não podem ser o mesmo.', Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
             $occupancy = $sourceBed->currentOccupancy;
 
             if (!$occupancy) {
-                throw new \Exception("Leito '{$sourceBed->identifier}' não possui paciente internado.", 409);
+                throw new \Exception("Leito '{$sourceBed->identifier}' não possui paciente internado.", Response::HTTP_CONFLICT);
             }
 
             if ($targetBed->isOccupied()) {
-                throw new \Exception("Leito destino '{$targetBed->identifier}' já está ocupado.", 409);
+                throw new \Exception("Leito destino '{$targetBed->identifier}' já está ocupado.", Response::HTTP_CONFLICT);
             }
 
             $occupancy->update(['discharged_at' => now()]);
@@ -89,13 +89,13 @@ class BedService
         $patient = Patient::where('cpf', $cpf)->first();
 
         if (!$patient) {
-            throw new \Exception('Paciente não encontrado.', 404);
+            throw new \Exception('Paciente não encontrado.', Response::HTTP_NOT_FOUND);
         }
 
         $occupancy = $patient->currentOccupancy()->with(['bed', 'patient'])->first();
 
         if (!$occupancy) {
-            throw new \Exception('Paciente não está internado em nenhum leito.', 404);
+            throw new \Exception('Paciente não está internado em nenhum leito.', Response::HTTP_NOT_FOUND);
         }
 
         return $occupancy;
