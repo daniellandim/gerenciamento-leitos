@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Bed;
 use App\Models\BedOccupancy;
 use App\Models\Patient;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -16,26 +17,30 @@ class BedService
      */
     public function admit(Bed $bed, Patient $patient): BedOccupancy
     {
-        return DB::transaction(function () use ($bed, $patient) {
-            if ($bed->isOccupied()) {
-                throw new \Exception("Leito '{$bed->identifier}' já está ocupado.", Response::HTTP_CONFLICT);
-            }
+        return Cache::lock("bed:{$bed->id}", 10)
+            ->block(5, function () use ($bed, $patient) {
 
-            if ($patient->isAdmitted()) {
-                $currentBed = $patient->currentOccupancy->bed->identifier;
-                throw new \Exception(
-                    "Paciente já está internado no leito '{$currentBed}'.",
-                    Response::HTTP_CONFLICT
-                );
-            }
+                return DB::transaction(function () use ($bed, $patient) {
 
-            return BedOccupancy::create([
-                'bed_id'        => $bed->id,
-                'patient_id'    => $patient->id,
-                'admitted_at'   => now(),
-                'discharged_at' => null,
-            ]);
-        });
+                    if ($bed->isOccupied()) {
+                        throw new \Exception(
+                            "Leito '{$bed->identifier}' já está ocupado.",
+                            Response::HTTP_CONFLICT
+                        );
+                    }
+
+                    if ($patient->isAdmitted()) {
+                        throw new \Exception("Paciente já está internado.", Response::HTTP_CONFLICT);
+                    }
+
+                    return BedOccupancy::create([
+                        'bed_id'        => $bed->id,
+                        'patient_id'    => $patient->id,
+                        'admitted_at'   => now(),
+                        'discharged_at' => null,
+                    ]);
+                });
+            });
     }
 
     /**
@@ -47,7 +52,7 @@ class BedService
             $occupancy = $bed->currentOccupancy;
 
             if (!$occupancy) {
-                throw new \Exception("Leito '{$bed->identifier}' já está desocupado.", Response::HTTP_CONFLICT);
+                throw new \DomainException("Leito '{$bed->identifier}' já está desocupado.", Response::HTTP_CONFLICT);
             }
 
             $occupancy->update(['discharged_at' => now()]);
@@ -58,30 +63,54 @@ class BedService
 
     public function transfer(Bed $sourceBed, Bed $targetBed): BedOccupancy
     {
-        return DB::transaction(function () use ($sourceBed, $targetBed) {
-            if ($sourceBed->id === $targetBed->id) {
-                throw new \Exception('O leito de origem e destino não podem ser o mesmo.', Response::HTTP_UNPROCESSABLE_ENTITY);
-            }
+        if ($sourceBed->id === $targetBed->id) {
+            throw new \DomainException(
+                'O leito de origem e destino não podem ser o mesmo.',
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
+        }
 
-            $occupancy = $sourceBed->currentOccupancy;
+        return Cache::lock("bed:{$targetBed->id}", 10)
+            ->block(5, function () use ($sourceBed, $targetBed) {
 
-            if (!$occupancy) {
-                throw new \Exception("Leito '{$sourceBed->identifier}' não possui paciente internado.", Response::HTTP_CONFLICT);
-            }
+                return DB::transaction(function () use ($sourceBed, $targetBed) {
 
-            if ($targetBed->isOccupied()) {
-                throw new \Exception("Leito destino '{$targetBed->identifier}' já está ocupado.", Response::HTTP_CONFLICT);
-            }
+                    $sourceBed->refresh();
+                    $targetBed->refresh();
 
-            $occupancy->update(['discharged_at' => now()]);
+                    $occupancy = $sourceBed->currentOccupancy;
 
-            return BedOccupancy::create([
-                'bed_id'        => $targetBed->id,
-                'patient_id'    => $occupancy->patient_id,
-                'admitted_at'   => now(),
-                'discharged_at' => null,
-            ]);
-        });
+                    if (!$occupancy) {
+                        throw new \DomainException(
+                            "Leito '{$sourceBed->identifier}' não possui paciente internado.",
+                            Response::HTTP_CONFLICT
+                        );
+                    }
+
+                    if ($targetBed->isOccupied()) {
+                        throw new \DomainException(
+                            "Leito destino '{$targetBed->identifier}' já está ocupado.",
+                            Response::HTTP_CONFLICT
+                        );
+                    }
+
+                    $occupancy->update(['discharged_at' => now()]);
+
+                    try {
+                        return BedOccupancy::create([
+                            'bed_id'        => $targetBed->id,
+                            'patient_id'    => $occupancy->patient_id,
+                            'admitted_at'   => now(),
+                            'discharged_at' => null,
+                        ]);
+                    } catch (\Illuminate\Database\QueryException $e) {
+                        throw new \DomainException(
+                            "Leito destino '{$targetBed->identifier}' já está ocupado.",
+                            Response::HTTP_CONFLICT
+                        );
+                    }
+                });
+            });
     }
 
     public function findBedByCpf(string $cpf): BedOccupancy
